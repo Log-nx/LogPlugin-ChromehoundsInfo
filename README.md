@@ -129,14 +129,6 @@ For issues, suggestions, or contributions:
 - Verify the plugin structure matches the expected format
 - Test commands in a development environment before deploying
 
-## Version History
-
-- **v1.0.0**: Initial release with comprehensive Chromehounds information database
-  - Search functionality across all categories
-  - Category-specific commands for browsing
-  - Rich Discord embed formatting
-  - Error handling and user feedback
-
 ## License
 
 This plugin is part of the Logamus Bot project. Please refer to the main project license for usage terms. 
