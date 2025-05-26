@@ -121,23 +121,6 @@ The plugin uses a static data structure stored in `data.py` containing:
 - Check multiple categories if you're not finding what you need
 - Use the suggestions provided when searches return no results
 
-## Customization
-
-### Adding New Information
-To add new game information:
-
-1. Edit `data.py` and add entries to the appropriate data dictionaries
-2. Follow the existing format with `title` and `content` fields
-3. Update the search keywords in `QUICK_REFERENCES` if needed
-4. Test the new information with search commands
-
-### Modifying Commands
-The plugin uses Discord's slash command system. To modify commands:
-
-1. Edit the command definitions in `chromehounds.py`
-2. Update the help text and documentation accordingly
-3. Test the changes in a development environment
-
 ## Support
 
 For issues, suggestions, or contributions:
