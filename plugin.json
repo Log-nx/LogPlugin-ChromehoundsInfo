@@ -1,0 +1,8 @@
+{
+  "name": "ChromehoundsInfo",
+  "version": "1.0.0",
+  "description": "Comprehensive information tool for the Chromehounds game including lore, mechanics, parts, and strategies.",
+  "author": "Log",
+  "requirements": ["requests", "aiohttp"],
+  "permissions": []
+} 
