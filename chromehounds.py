@@ -33,179 +33,88 @@ class ChromehoundsInfo(Plugin):
     
     name = "chromehounds_info"
     description = "Comprehensive information tool for the Chromehounds game"
-    version = "1.0.0"
+    version = "1.0.2"
     
     def __init__(self, bot):
         super().__init__(bot)
-        self.logger = logging.getLogger(f"plugins.{self.name}")
+        self.logger = logging.getLogger("plugins.chromehounds_info")
+        self._setup_commands()
+        
+    def _setup_commands(self):
+        """Set up the plugin's commands."""
+        
+        # Main command group
+        chromehounds_group = app_commands.Group(
+            name="chromehounds",
+            description="Chromehounds game information commands",
+            guild_ids=None  # None means global commands
+        )
+        
+        # Add commands to the group
+        @chromehounds_group.command(name="search", description="Search for any Chromehounds information")
+        @app_commands.describe(query="What would you like to know about Chromehounds?")
+        async def search(interaction: discord.Interaction, query: str):
+            await self._handle_search(interaction, query)
+            
+        @chromehounds_group.command(name="lore", description="Get lore and background information")
+        @app_commands.describe(topic="The lore topic to learn about")
+        async def lore(interaction: discord.Interaction, topic: Optional[str] = None):
+            await self._handle_category(interaction, "lore", topic, [LORE_DATA, NATIONS_DATA, ORGANIZATIONS_DATA, HISTORICAL_DATA])
+            
+        @chromehounds_group.command(name="mechanics", description="Get game mechanics information")
+        @app_commands.describe(topic="The mechanic topic to learn about")
+        async def mechanics(interaction: discord.Interaction, topic: Optional[str] = None):
+            await self._handle_category(interaction, "mechanics", topic, [MECHANICS_DATA, COMBAT_SYSTEMS, COMMUNICATION_DATA])
+            
+        @chromehounds_group.command(name="parts", description="Get parts and equipment information")
+        @app_commands.describe(topic="The equipment topic to learn about")
+        async def parts(interaction: discord.Interaction, topic: Optional[str] = None):
+            await self._handle_category(interaction, "parts", topic, [EQUIPMENT_DATA, ROLE_TYPES])
+            
+        @chromehounds_group.command(name="strategy", description="Get tactical and strategic information")
+        @app_commands.describe(topic="The strategy topic to learn about")
+        async def strategy(interaction: discord.Interaction, topic: Optional[str] = None):
+            await self._handle_category(interaction, "strategy", topic, [ROLE_TYPES, COMBAT_SYSTEMS])
+        
+        # Add the command group to the bot
+        self.bot.tree.add_command(chromehounds_group)
         
     async def setup(self):
         """Set up the plugin."""
-        self.logger.info("Setting up Chromehounds Information plugin...")
-
-    @app_commands.command(
-        name="chromehounds",
-        description="Search for information about Chromehounds"
-    )
-    @app_commands.describe(
-        command="Command type (search/lore/mechanics/parts/strategy)",
-        topic="Topic to search for or get information about"
-    )
-    async def chromehounds_command(
-        self,
-        interaction: discord.Interaction,
-        command: str,
-        topic: Optional[str] = None
-    ):
-        """Main command handler for Chromehounds information."""
+        try:
+            self.logger.info("Setting up Chromehounds Information plugin...")
+            import aiohttp
+            self.logger.info("Chromehounds Information plugin setup complete!")
+            return True
+        except ImportError as e:
+            self.logger.error(f"Required package not found: {str(e)}")
+            return False
+        except Exception as e:
+            self.logger.error(f"Error during plugin setup: {str(e)}")
+            return False
+            
+    async def _handle_search(self, interaction: discord.Interaction, query: str):
+        """Handle the search command."""
         await interaction.response.defer()
         
-        command = command.lower()
-        
-        if command == "search":
-            if not topic:
-                suggestions = get_quick_suggestions()
-                embed = discord.Embed(
-                    title="Chromehounds Search",
-                    description="Please provide a search term. Here are some suggested topics:",
-                    color=discord.Color.blue()
-                )
-                embed.add_field(
-                    name="Suggested Topics",
-                    value="\n".join(f"• {topic}" for topic in suggestions[:10]),
-                    inline=False
-                )
-            else:
-                results = search_chromehounds_data(topic)
-                if not results:
-                    suggestions = get_quick_suggestions()
-                    embed = discord.Embed(
-                        title="No Results Found",
-                        description=f"No results found for '{topic}'. Here are some suggested topics:",
-                        color=discord.Color.blue()
-                    )
-                    embed.add_field(
-                        name="Suggested Topics",
-                        value="\n".join(f"• {s}" for s in suggestions[:5]),
-                        inline=False
-                    )
-                else:
-                    embed = discord.Embed(
-                        title=f"Search Results: {topic}",
-                        color=discord.Color.blue()
-                    )
-                    for result in results:
-                        embed.add_field(
-                            name=result["title"],
-                            value=result["content"][:1024] if "content" in result else result["description"][:1024],
-                            inline=False
-                        )
-        
-        elif command == "lore":
-            # Handle lore command with more flexible topic matching
-            if not topic:
-                embed = self.create_category_overview("Lore & Background", LORE_DATA)
-            else:
-                results = self.search_category(topic, LORE_DATA, NATIONS_DATA, ORGANIZATIONS_DATA, HISTORICAL_DATA)
-                embed = self.create_search_results(results, "Lore", topic)
-        
-        elif command == "mechanics":
-            # Handle mechanics command with expanded data
-            if not topic:
-                embed = self.create_category_overview("Game Mechanics", MECHANICS_DATA)
-            else:
-                results = self.search_category(topic, MECHANICS_DATA, COMBAT_SYSTEMS, COMMUNICATION_DATA)
-                embed = self.create_search_results(results, "Mechanics", topic)
-        
-        elif command == "parts":
-            # Handle parts command with comprehensive equipment data
-            if not topic:
-                embed = self.create_category_overview("Parts & Equipment", EQUIPMENT_DATA)
-            else:
-                results = self.search_category(topic, EQUIPMENT_DATA, ROLE_TYPES)
-                embed = self.create_search_results(results, "Parts", topic)
-        
-        elif command == "strategy":
-            # Handle strategy command with tactical information
-            if not topic:
-                embed = self.create_category_overview("Strategy & Tactics", ROLE_TYPES)
-            else:
-                results = self.search_category(topic, ROLE_TYPES, COMBAT_SYSTEMS)
-                embed = self.create_search_results(results, "Strategy", topic)
-        
-        else:
-            embed = discord.Embed(
-                title="Invalid Command",
-                description="Please use: search, lore, mechanics, parts, or strategy",
-                color=discord.Color.red()
-            )
-        
-        await interaction.followup.send(embed=embed)
-
-    def create_category_overview(self, title: str, data: dict) -> discord.Embed:
-        """Create an overview embed for a category."""
-        embed = discord.Embed(
-            title=title,
-            color=discord.Color.blue()
-        )
-        
-        # Add available topics
-        topics = []
-        for key, value in data.items():
-            if isinstance(value, dict) and "title" in value:
-                topics.append(value["title"])
-            else:
-                topics.append(key.replace("_", " ").title())
-        
-        embed.add_field(
-            name="Available Topics",
-            value="\n".join(f"• {topic}" for topic in topics),
-            inline=False
-        )
-        
-        return embed
-
-    def search_category(self, topic: str, *data_sources: dict) -> List[dict]:
-        """Search within specific categories for matching information."""
-        results = []
-        topic = topic.lower()
-        
-        for data_source in data_sources:
-            for key, value in data_source.items():
-                if isinstance(value, dict):
-                    # Check title matches
-                    if "title" in value and topic in value["title"].lower():
-                        results.append(value)
-                    # Check content/description matches
-                    elif "content" in value and topic in value["content"].lower():
-                        results.append(value)
-                    elif "description" in value and topic in value["description"].lower():
-                        results.append(value)
-                    
-                    # Search in nested dictionaries
-                    for subkey, subvalue in value.items():
-                        if isinstance(subvalue, (str, list)):
-                            content = str(subvalue).lower()
-                            if topic in content and value not in results:
-                                results.append(value)
-                                break
-        
-        return results[:5]  # Return top 5 results
-
-    def create_search_results(self, results: List[dict], category: str, topic: str) -> discord.Embed:
-        """Create an embed for search results."""
+        results = search_chromehounds_data(query)
         if not results:
+            suggestions = get_quick_suggestions()
             embed = discord.Embed(
-                title=f"No {category} Results",
-                description=f"No results found for '{topic}' in {category}. Try using broader terms or check the category overview.",
+                title="No Results Found",
+                description=f"No results found for '{query}'. Here are some suggested topics:",
                 color=discord.Color.blue()
+            )
+            embed.add_field(
+                name="Suggested Topics",
+                value="\n".join(f"• {s}" for s in suggestions[:5]),
+                inline=False
             )
         else:
             embed = discord.Embed(
-                title=f"{category} Information: {topic}",
+                title=f"Search Results: {query}",
                 color=discord.Color.blue()
             )
-            
             for result in results:
                 embed.add_field(
                     name=result["title"],
@@ -213,7 +122,74 @@ class ChromehoundsInfo(Plugin):
                     inline=False
                 )
         
-        return embed
+        await interaction.followup.send(embed=embed)
+        
+    async def _handle_category(self, interaction: discord.Interaction, category: str, topic: Optional[str], data_sources: List[dict]):
+        """Handle category-specific commands."""
+        await interaction.response.defer()
+        
+        if not topic:
+            # Show category overview
+            embed = discord.Embed(
+                title=f"Chromehounds {category.title()} Information",
+                description=f"Available topics in {category}:",
+                color=discord.Color.blue()
+            )
+            
+            # Collect all available topics from data sources
+            topics = []
+            for source in data_sources:
+                for key, value in source.items():
+                    if isinstance(value, dict) and "title" in value:
+                        topics.append(value["title"])
+                    else:
+                        topics.append(key.replace("_", " ").title())
+            
+            # Sort and deduplicate topics
+            topics = sorted(list(set(topics)))
+            
+            embed.add_field(
+                name="Topics",
+                value="\n".join(f"• {topic}" for topic in topics),
+                inline=False
+            )
+            embed.add_field(
+                name="Usage",
+                value=f"Use `/chromehounds {category} <topic>` to get detailed information about a specific topic.",
+                inline=False
+            )
+        else:
+            # Search for specific topic
+            results = []
+            topic_lower = topic.lower()
+            
+            for source in data_sources:
+                for key, value in source.items():
+                    if isinstance(value, dict):
+                        if ("title" in value and topic_lower in value["title"].lower()) or \
+                           ("content" in value and topic_lower in value["content"].lower()) or \
+                           ("description" in value and topic_lower in value["description"].lower()):
+                            results.append(value)
+            
+            if not results:
+                embed = discord.Embed(
+                    title=f"No {category.title()} Results",
+                    description=f"No results found for '{topic}' in {category}. Try using broader terms or check the category overview with `/chromehounds {category}`",
+                    color=discord.Color.blue()
+                )
+            else:
+                embed = discord.Embed(
+                    title=f"{category.title()} Information: {topic}",
+                    color=discord.Color.blue()
+                )
+                for result in results[:5]:  # Show top 5 results
+                    embed.add_field(
+                        name=result["title"],
+                        value=result["content"][:1024] if "content" in result else result["description"][:1024],
+                        inline=False
+                    )
+        
+        await interaction.followup.send(embed=embed)
 
     @app_commands.command(
         name="hound_role",
