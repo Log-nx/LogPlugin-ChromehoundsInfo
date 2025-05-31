@@ -1,6 +1,6 @@
 {
   "name": "chromehounds_info",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Comprehensive information tool for the Chromehounds game including lore, mechanics, parts, and strategies.",
   "author": "Log",
   "requirements": ["discord.py", "aiohttp"],

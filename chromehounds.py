@@ -28,6 +28,17 @@ from .data import (
     get_quick_suggestions
 )
 
+def get_topics_from_data(data_sources: List[dict]) -> List[str]:
+    """Extract all available topics from data sources."""
+    topics = set()
+    for source in data_sources:
+        for key, value in source.items():
+            if isinstance(value, dict) and "title" in value:
+                topics.add(value["title"])
+            else:
+                topics.add(key.replace("_", " ").title())
+    return sorted(list(topics))
+
 class ChromehoundsInfo(Plugin):
     """Plugin for providing Chromehounds game information."""
     
@@ -38,46 +49,89 @@ class ChromehoundsInfo(Plugin):
     def __init__(self, bot):
         super().__init__(bot)
         self.logger = logging.getLogger("plugins.chromehounds_info")
+        self.chromehounds_group = None
         self._setup_commands()
         
     def _setup_commands(self):
         """Set up the plugin's commands."""
         
+        # Remove existing commands if they exist (for reloading)
+        if self.chromehounds_group is not None:
+            self.bot.tree.remove_command("chromehounds")
+            for command in self.chromehounds_group.commands:
+                self.bot.tree.remove_command(command.name)
+        
         # Main command group
-        chromehounds_group = app_commands.Group(
+        self.chromehounds_group = app_commands.Group(
             name="chromehounds",
             description="Chromehounds game information commands",
             guild_ids=None  # None means global commands
         )
         
         # Add commands to the group
-        @chromehounds_group.command(name="search", description="Search for any Chromehounds information")
+        @self.chromehounds_group.command(name="search", description="Search for any Chromehounds information")
         @app_commands.describe(query="What would you like to know about Chromehounds?")
         async def search(interaction: discord.Interaction, query: str):
             await self._handle_search(interaction, query)
             
-        @chromehounds_group.command(name="lore", description="Get lore and background information")
+        @self.chromehounds_group.command(name="lore", description="Get lore and background information")
         @app_commands.describe(topic="The lore topic to learn about")
         async def lore(interaction: discord.Interaction, topic: Optional[str] = None):
             await self._handle_category(interaction, "lore", topic, [LORE_DATA, NATIONS_DATA, ORGANIZATIONS_DATA, HISTORICAL_DATA])
             
-        @chromehounds_group.command(name="mechanics", description="Get game mechanics information")
+        @lore.autocomplete("topic")
+        async def lore_autocomplete(interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+            topics = get_topics_from_data([LORE_DATA, NATIONS_DATA, ORGANIZATIONS_DATA, HISTORICAL_DATA])
+            return [
+                app_commands.Choice(name=topic, value=topic)
+                for topic in topics
+                if current.lower() in topic.lower()
+            ][:25]  # Discord limits to 25 choices
+            
+        @self.chromehounds_group.command(name="mechanics", description="Get game mechanics information")
         @app_commands.describe(topic="The mechanic topic to learn about")
         async def mechanics(interaction: discord.Interaction, topic: Optional[str] = None):
             await self._handle_category(interaction, "mechanics", topic, [MECHANICS_DATA, COMBAT_SYSTEMS, COMMUNICATION_DATA])
             
-        @chromehounds_group.command(name="parts", description="Get parts and equipment information")
+        @mechanics.autocomplete("topic")
+        async def mechanics_autocomplete(interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+            topics = get_topics_from_data([MECHANICS_DATA, COMBAT_SYSTEMS, COMMUNICATION_DATA])
+            return [
+                app_commands.Choice(name=topic, value=topic)
+                for topic in topics
+                if current.lower() in topic.lower()
+            ][:25]
+            
+        @self.chromehounds_group.command(name="parts", description="Get parts and equipment information")
         @app_commands.describe(topic="The equipment topic to learn about")
         async def parts(interaction: discord.Interaction, topic: Optional[str] = None):
             await self._handle_category(interaction, "parts", topic, [EQUIPMENT_DATA, ROLE_TYPES])
             
-        @chromehounds_group.command(name="strategy", description="Get tactical and strategic information")
+        @parts.autocomplete("topic")
+        async def parts_autocomplete(interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+            topics = get_topics_from_data([EQUIPMENT_DATA, ROLE_TYPES])
+            return [
+                app_commands.Choice(name=topic, value=topic)
+                for topic in topics
+                if current.lower() in topic.lower()
+            ][:25]
+            
+        @self.chromehounds_group.command(name="strategy", description="Get tactical and strategic information")
         @app_commands.describe(topic="The strategy topic to learn about")
         async def strategy(interaction: discord.Interaction, topic: Optional[str] = None):
             await self._handle_category(interaction, "strategy", topic, [ROLE_TYPES, COMBAT_SYSTEMS])
+            
+        @strategy.autocomplete("topic")
+        async def strategy_autocomplete(interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+            topics = get_topics_from_data([ROLE_TYPES, COMBAT_SYSTEMS])
+            return [
+                app_commands.Choice(name=topic, value=topic)
+                for topic in topics
+                if current.lower() in topic.lower()
+            ][:25]
         
         # Add the command group to the bot
-        self.bot.tree.add_command(chromehounds_group)
+        self.bot.tree.add_command(self.chromehounds_group)
         
     async def setup(self):
         """Set up the plugin."""
@@ -137,16 +191,7 @@ class ChromehoundsInfo(Plugin):
             )
             
             # Collect all available topics from data sources
-            topics = []
-            for source in data_sources:
-                for key, value in source.items():
-                    if isinstance(value, dict) and "title" in value:
-                        topics.append(value["title"])
-                    else:
-                        topics.append(key.replace("_", " ").title())
-            
-            # Sort and deduplicate topics
-            topics = sorted(list(set(topics)))
+            topics = get_topics_from_data(data_sources)
             
             embed.add_field(
                 name="Topics",
@@ -350,4 +395,18 @@ class ChromehoundsInfo(Plugin):
                 color=discord.Color.blue()
             )
             
-        await interaction.response.send_message(embed=embed) 
+        await interaction.response.send_message(embed=embed)
+
+    async def cleanup(self):
+        """Clean up the plugin before unloading."""
+        try:
+            self.logger.info("Cleaning up Chromehounds Information plugin...")
+            if self.chromehounds_group is not None:
+                self.bot.tree.remove_command("chromehounds")
+                for command in self.chromehounds_group.commands:
+                    self.bot.tree.remove_command(command.name)
+            self.logger.info("Chromehounds Information plugin cleanup complete!")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error during plugin cleanup: {str(e)}")
+            return False 
