@@ -25,12 +25,6 @@ The Chromehounds Information Plugin is designed to be a complete reference tool 
 - **Parts**: Hound components and equipment details
 - **Strategy**: Tactical advice and build strategies
 
-### 🎨 Rich Discord Integration
-- Beautiful embeds with category-specific colors
-- Thumbnail images for visual appeal
-- Proper formatting with Discord markdown
-- Error handling with helpful messages
-
 ## Commands
 
 ### Main Commands
@@ -85,23 +79,12 @@ plugins/Chromehounds/
 └── README.md           # This documentation
 ```
 
-### Dependencies
-- `discord.py` - Discord bot framework
-- `asyncio` - Asynchronous programming support
-- Standard Python libraries (logging, typing)
-
 ### Database
 The plugin uses a static data structure stored in `data.py` containing:
 - Comprehensive game information organized by category
 - Search functionality with relevance scoring
 - Quick reference mappings for common terms
 
-## Installation
-
-1. Place the `Chromehounds` folder in your bot's `plugins/` directory
-2. Ensure all dependencies are installed (they should be in your bot's requirements.txt)
-3. Restart your bot or reload plugins
-4. The plugin will automatically register its commands
 
 ## Usage Tips
 
